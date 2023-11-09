@@ -9,13 +9,15 @@ import UIKit
 
 class ListViewController: BaseViewController, UICollectionViewDelegate, UICollectionViewDataSource {
     
-    let margin: CGFloat = 20.0
+    private let refreshControl = UIRefreshControl()
+    private let margin: CGFloat = 20.0
+    private var items: [SurveyViewModel] = []
+    private var bulletViews: [UIView] = []
     var interactor: ListBusinessLogic?
     var router: ListWireframeLogic?
-    var items: [SurveyViewModel] = []
-    var bulletViews: [UIView] = []
     
-    let collectionView: UICollectionView = {
+    
+    private let collectionView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
         layout.scrollDirection = .horizontal
         layout.minimumLineSpacing = 0
@@ -29,7 +31,7 @@ class ListViewController: BaseViewController, UICollectionViewDelegate, UICollec
         return collectionView
     }()
     
-    let detailButton: UIButton = {
+    private let detailButton: UIButton = {
         let button = UIButton()
         button.translatesAutoresizingMaskIntoConstraints = false
         button.layer.backgroundColor = UIColor.white.cgColor
@@ -37,7 +39,7 @@ class ListViewController: BaseViewController, UICollectionViewDelegate, UICollec
         return button
     }()
     
-    let logoutButton: UIButton = {
+    private let logoutButton: UIButton = {
         let button = UIButton()
         button.translatesAutoresizingMaskIntoConstraints = false
         button.backgroundColor = UIColor.clear
@@ -50,7 +52,7 @@ class ListViewController: BaseViewController, UICollectionViewDelegate, UICollec
         return button
     }()
     
-    let detailImageView: UIImageView = {
+    private let detailImageView: UIImageView = {
         let imageView = UIImageView()
         imageView.translatesAutoresizingMaskIntoConstraints = false
         imageView.tintColor = UIColor.black
@@ -58,7 +60,7 @@ class ListViewController: BaseViewController, UICollectionViewDelegate, UICollec
         imageView.image = UIImage(systemName: "chevron.right")
         return imageView
     }()
-    let bulletStackView: UIStackView = {
+    private let bulletStackView: UIStackView = {
         let stackView = UIStackView()
         stackView.spacing = 10
         stackView.alignment = .leading
@@ -67,22 +69,12 @@ class ListViewController: BaseViewController, UICollectionViewDelegate, UICollec
         return stackView
     }()
     
-    lazy var safeContentInsets: UIEdgeInsets = {
-        let safeArea = view.safeAreaLayoutGuide
-        let contentInsets = UIEdgeInsets(
-            top: safeArea.layoutFrame.minY - view.frame.minY,
-            left: safeArea.layoutFrame.minX - view.frame.minX,
-            bottom: view.frame.maxY - safeArea.layoutFrame.maxY,
-            right: view.frame.maxX - safeArea.layoutFrame.maxX
-        )
-        return contentInsets
-    }()
-    
 
     override func viewDidLoad() {
         super.viewDidLoad()
         setUpCollection()
         setUpViews()
+        setupPullToRefresh()
         interactor?.fetchList()
         showLoading()
     }
@@ -94,6 +86,7 @@ class ListViewController: BaseViewController, UICollectionViewDelegate, UICollec
         detailButton.addSubview(detailImageView)
         logoutButton.addTarget(self, action: #selector(logout), for: .touchUpInside)
         detailButton.addTarget(self, action: #selector(goToDetail), for: .touchUpInside)
+        
         NSLayoutConstraint.activate([
             detailButton.widthAnchor.constraint(equalToConstant: 56),
             detailButton.heightAnchor.constraint(equalToConstant: 56),
@@ -147,6 +140,14 @@ class ListViewController: BaseViewController, UICollectionViewDelegate, UICollec
         }
     }
     
+    func setupPullToRefresh() {
+        //collectionView.refreshControl = refreshControl
+        refreshControl.tintColor = .white
+        refreshControl.addTarget(self, action: #selector(handleRefresh), for: .valueChanged)
+        refreshControl.frame = CGRect(x: -50, y: 200, width: 50, height: 50)
+
+    }
+    
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         return items.count
     }
@@ -173,6 +174,13 @@ class ListViewController: BaseViewController, UICollectionViewDelegate, UICollec
         KeychainManager.shared.deleteTokenInfo()
         NotificationCenter.default.post(name: .userShouldLogout, object: nil)
     }
+    
+    @objc func handleRefresh() {
+        interactor?.fetchList()
+        showLoading()
+        refreshControl.endRefreshing()
+    }
+    
 }
 
 
